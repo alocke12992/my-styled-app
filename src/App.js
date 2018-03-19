@@ -8,9 +8,26 @@ import
   Icon,
   Grid,
 } from 'semantic-ui-react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import HeaderText from './HeaderText';
 import axios from 'axios';
+
+const rotate360 = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+`
+
+const Star = styled.div`
+  display: inline-block;
+  color: yellow;
+  text-shadow: 1px, 1px, 1px, black;
+  animation: ${rotate360 } 2s linear infinite;
+`
 
 const AppContainer = styled.div`
 background: linear-gradient(to bottom right, #004e92, #000428);
@@ -27,6 +44,10 @@ const Transparent = styled.div`
 
 const StyledCard = styled( Card ) `
   height: 200px;
+`
+
+const IssuesCard = StyledCard.extend`
+  border: solid 4px red !important;
 `
 
 const Truncated = styled.div`
@@ -55,8 +76,20 @@ class App extends React.Component
 
   componentDidMount()
   {
-    axios.get( 'https://api.github.com/users/alocke12992/repos?sort=created' )
-      .then( res => this.setState( { repos: res.data } ) )
+    if ( localStorage.repos )
+    {
+      this.setState( {
+        repos: JSON.parse( localStorage.repos )
+      } )
+    } else
+    {
+      axios.get( 'https://api.github.com/users/alocke12992/repos?sort=created' )
+        .then( res =>
+        {
+          localStorage.repos = JSON.stringify( res.data )
+          this.setState( { repos: localStorage.repos } )
+        } )
+    }
   }
 
   render()
@@ -73,22 +106,31 @@ class App extends React.Component
           <Grid>
             <Grid.Row>
               { this.state.repos.map( r =>
-                <Grid.Column key={ r.id } width={ 4 }>
-                  <StyledCard>
-                    <Card.Content>
-                      <Card.Header>
-                        <Truncated>
-                          { r.full_name }
-                        </Truncated>
-                      </Card.Header>
-                      <Card.Meta>
-                        { r.description }
-                      </Card.Meta>
-                    </Card.Content>
-                  </StyledCard>
-                </Grid.Column>
-              )
-              }
+              {
+                const Component = r.open_issues > 0 ?
+                  IssuesCard : StyledCard
+                return (
+                  <Grid.Column key={ r.id } width={ 4 }>
+                    <Component>
+                      <Card.Content>
+                        <Card.Header>
+                          <Truncated>
+                            { r.full_name }
+                          </Truncated>
+                        </Card.Header>
+                        <Card.Meta>
+                          { r.description }
+                        </Card.Meta>
+                        { r.stargazers_count > 0 &&
+                          <Star>
+                            <Icon name="star" />
+                          </Star>
+                        }
+                      </Card.Content>
+                    </Component>
+                  </Grid.Column>
+                )
+              } ) }
             </Grid.Row>
           </Grid>
         </Segment>
