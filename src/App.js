@@ -12,6 +12,14 @@ import styled, { keyframes } from 'styled-components';
 import HeaderText from './HeaderText';
 import axios from 'axios';
 
+const ButtonLink = styled.a`
+  float: right;
+  padding: 10px 30px;
+  border-radius: 10px;
+  color: ${ props => props.theme.fg } !important; 
+  background-color: ${ props => props.theme.bg } !important;
+`
+
 const rotate360 = keyframes`
   from {
     transform: rotate(0deg);
@@ -20,6 +28,15 @@ const rotate360 = keyframes`
   to {
     transform: rotate(360deg);
   }
+`
+
+const SearchBox = styled.input.attrs( {
+  placeholder: 'search'
+} )
+  `
+  border-radius: 10px;
+  padding: 10px;
+  margin: 10px; 
 `
 
 const Star = styled.div`
@@ -57,38 +74,28 @@ const Truncated = styled.div`
   text-overflow: ellipsis; 
 `
 
-const fontSize = ( size ) =>
-{
-  switch ( size )
-  {
-    case 'large':
-      return '4rem'
-    case 'small':
-      return '1rem'
-    default:
-      return '2rem'
-  }
-}
-
 class App extends React.Component
 {
-  state = { repos: [] }
+  state = { repos: [], visible: [] }
 
   componentDidMount()
   {
-    if ( localStorage.repos )
+    axios.get( 'https://api.github.com/users/alocke12992/repos?sort=created' )
+      .then( res => this.setState( { repos: res.data, visible: res.data } ) )
+  }
+
+  search = () =>
+  {
+    const { repos } = this.state;
+    let regex = new RegExp( this.searchTerm.value.toLowerCase() )
+    if ( this.searchTerm.value === '' )
     {
-      this.setState( {
-        repos: JSON.parse( localStorage.repos )
-      } )
+      this.setState( { visible: repos } )
     } else
     {
-      axios.get( 'https://api.github.com/users/alocke12992/repos?sort=created' )
-        .then( res =>
-        {
-          localStorage.repos = JSON.stringify( res.data )
-          this.setState( { repos: localStorage.repos } )
-        } )
+      this.setState( {
+        visible: repos.filter( r => regex.test( r.full_name.toLowerCase() ) )
+      } )
     }
   }
 
@@ -98,14 +105,19 @@ class App extends React.Component
       <AppContainer>
         <Header fSize='large' as={ HeaderText }>
           My Portfolio
-        </Header>
+          </Header>
         <Segment as={ Transparent }>
           <Header as={ HeaderText }>
             My Projects
-          </Header>
+            </Header>
+          <label>Search</label>
+          <SearchBox
+            onChange={ this.search }
+            innerRef={ ( n ) => this.searchTerm = n }
+          />
           <Grid>
             <Grid.Row>
-              { this.state.repos.map( r =>
+              { this.state.visible.map( r =>
               {
                 const Component = r.open_issues > 0 ?
                   IssuesCard : StyledCard
@@ -127,6 +139,15 @@ class App extends React.Component
                           </Star>
                         }
                       </Card.Content>
+                      <Card.Content extra>
+                        <ButtonLink
+                          href={ r.html_url }
+                          tasrget='_blank'
+                          rel='noopener noreffer'
+                        >
+                          View
+                        </ButtonLink>
+                      </Card.Content>
                     </Component>
                   </Grid.Column>
                 )
@@ -137,7 +158,7 @@ class App extends React.Component
         <Segment as={ Transparent }>
           <Header as={ HeaderText }>
             Contact
-          </Header>
+            </Header>
         </Segment>
       </AppContainer>
     )
